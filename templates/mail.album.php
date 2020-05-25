@@ -15,6 +15,6 @@
                 <?php echo $album['artist']['name'] ?>
             </a>
         </div>
-        <small style="color: #92929d">Released on <?php echo $album['release_date'] ?></small>
+        <small style="color: #92929d">Released on <?php echo $album['release_date'] ?> - <?php echo ucfirst($album['record_type']) ?></small>
     </div>
 </div>
