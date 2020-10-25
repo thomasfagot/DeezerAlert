@@ -17,13 +17,18 @@ if (!($deezerAccessToken = getenv('DEEZER_ACCESS_TOKEN'))
     throw new RuntimeException('Configuration is not complete in ".env" file.');
 }
 
-$playlist = (new Handler($deezerAccessToken))->process();
+$content = null;
+try {
+    if ($playlist = (new Handler($deezerAccessToken))->process()) {
+        ob_start();
+        include(__DIR__.'/templates/mail.content.php');
+        $content = ob_get_clean();
+    }
+} catch (Exception $e) {
+    $content = '<pre>'.$e->getMessage().'</pre>';
+}
 
-if ($playlist) {
-    ob_start();
-    include(__DIR__.'/templates/mail.content.php');
-    $content = ob_get_clean();
-
+if ($content) {
     (new Mailer(Transport::fromDsn($mailerDSN)))->send(
         (new Email())
             ->from($emailSender)
