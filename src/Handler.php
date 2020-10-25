@@ -5,6 +5,8 @@ namespace DeezerAlert;
 use RuntimeException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use function md5;
+use function substr;
 
 final class Handler
 {
@@ -47,13 +49,15 @@ final class Handler
 
     public function process(): array
     {
-        $artistCollection = $this->requestAll(self::DEEZER_ENDPOINT.'/user/'.$this->deezerId.'/artists');
         $today = date('Y-m-d');
+		$threeMonthsAgo = date('Y-m-d', strtotime('3 months ago'));
 
-        foreach ($artistCollection as $artist) {
-            if (!isset($this->savedData[$artist['id']])) {
+        foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/user/'.$this->deezerId.'/artists') as $artist) {
+            $artistHash = substr(md5($artist['name']), 0, 7);
+
+            if (!isset($this->savedData[$artistHash])) {
                 $checkNeWContent = false;
-                $this->savedData[$artist['id']] = [
+                $this->savedData[$artistHash] = [
                     'nb_album' => $artist['nb_album'],
                     'albums' => [],
                 ];
@@ -61,12 +65,14 @@ final class Handler
                 $checkNeWContent = true;
             }
 
-            if (!$this->savedData[$artist['id']]['albums'] || $artist['nb_album'] - $this->savedData[$artist['id']]['nb_album'] > 0) {
+            if (!$this->savedData[$artistHash]['albums'] || $artist['nb_album'] - $this->savedData[$artistHash]['nb_album'] > 0) {
                 foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/artist/'.$artist['id'].'/albums') as $album) {
-                    if (!in_array($album['id'], $this->savedData[$artist['id']]['albums'], true)) {
-                        $this->savedData[$artist['id']]['albums'][] = $album['id'];
+                    $albumHash = substr(md5($album['title']), 0, 7);
 
-                        if ($checkNeWContent && $album['release_date'] <= $today) {
+                    if (!in_array($albumHash, $this->savedData[$artistHash]['albums'], true)) {
+                        $this->savedData[$artistHash]['albums'][] = $albumHash;
+
+                        if ($checkNeWContent && $album['release_date'] <= $today && $album['release_date'] >= $threeMonthsAgo) {
                             $album['artist'] = $artist;
                             $this->newContent[] = $album;
                         }
@@ -107,7 +113,7 @@ final class Handler
     private function handleRequestQuota(): void
     {
         if (0 === ++$this->requestCounter % self::DEEZER_QUOTA_PER_X_SECONDS) {
-            sleep(self::DEEZER_QUOTA_SECONDS + 0.1);
+            sleep(self::DEEZER_QUOTA_SECONDS + 1);
         }
     }
 }
