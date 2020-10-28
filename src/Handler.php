@@ -146,7 +146,7 @@ final class Handler
 
         $trackCollection = [];
         foreach ($newContent as $album) {
-            foreach ($album['tracks']['data'] as $track) {
+            foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/album/'.$album['id'].'/tracks') as $track) {
                 $trackCollection[] = $track;
             }
         }
