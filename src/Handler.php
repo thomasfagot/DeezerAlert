@@ -5,6 +5,7 @@ namespace DeezerAlert;
 use RuntimeException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use function count;
 use function md5;
 use function substr;
 
@@ -19,11 +20,6 @@ final class Handler
      * @var array
      */
     private $savedData;
-
-    /**
-     * @var array
-     */
-    private $newContent = [];
 
     /**
      * @var HttpClientInterface
@@ -90,33 +86,32 @@ final class Handler
 
     private function getNewContent(): array
     {
+//        return $this->mockNewContent();
         $newContent = [];
         $today = date('Y-m-d');
         $threeMonthsAgo = date('Y-m-d', strtotime('3 months ago'));
+        $twoWeeksAgo = date('Y-m-d', strtotime('2 weeks ago'));
 
         foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/user/me/artists?access_token='.$this->accessToken) as $artist) {
             $artistHash = substr(md5($artist['name']), 0, 7);
 
             if (!isset($this->savedData[$artistHash])) {
-                $checkNeWContent = false;
-                $this->savedData[$artistHash] = [
-                    'nb_album' => $artist['nb_album'],
-                    'albums' => [],
-                ];
+                // Recently added artist
+                $this->savedData[$artistHash] = [];
+                $maximumDate = $twoWeeksAgo;
             } else {
-                $checkNeWContent = true;
+                $maximumDate = $threeMonthsAgo;
             }
 
-            if (!$this->savedData[$artistHash]['albums'] || $artist['nb_album'] - $this->savedData[$artistHash]['nb_album'] > 0) {
+            if ($artist['nb_album'] > count($this->savedData[$artistHash])) {
                 foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/artist/'.$artist['id'].'/albums') as $album) {
                     $albumHash = substr(md5($album['title']), 0, 7);
 
-                    if (!in_array($albumHash, $this->savedData[$artistHash]['albums'], true)) {
-                        $this->savedData[$artistHash]['albums'][] = $albumHash;
+                    if ($album['release_date'] <= $today && !in_array($albumHash, $this->savedData[$artistHash], true)) {
+                        $this->savedData[$artistHash][] = $albumHash;
 
-                        if ($checkNeWContent && $album['release_date'] <= $today && $album['release_date'] >= $threeMonthsAgo) {
-                            $album['artist'] = $artist;
-                            $this->newContent[] = $album;
+                        if ($album['release_date'] >= $maximumDate) {
+                            $newContent[] = $album;
                         }
                     }
                 }
@@ -134,11 +129,11 @@ final class Handler
 
         $this->handleRequestQuota();
         $playlistId = $this->httpClient->request(
-                'POST',
-                self::DEEZER_ENDPOINT.'/user/me/playlists'
-                .'?access_token='.$this->accessToken
-                .'&title='.$playlistName
-            )->toArray()['id'] ?? null;
+            'POST',
+            self::DEEZER_ENDPOINT.'/user/me/playlists'
+            .'?access_token='.$this->accessToken
+            .'&title='.$playlistName
+        )->toArray()['id'] ?? null;
 
         if (!$playlistId) {
             throw new RuntimeException('Count not create playlist');
@@ -160,7 +155,7 @@ final class Handler
         )->getContent();
 
         if ('true' !== $response) {
-            throw new RuntimeException('Could not add tracks to playlist');
+            throw new RuntimeException('Could not add tracks to playlist : '.$response);
         }
 
         return new Playlist(
@@ -179,5 +174,40 @@ final class Handler
             self::DEEZER_ENDPOINT.'/playlist/'.$playlistId
                 .'?access_token='.$this->accessToken
             )->toArray()['picture_medium'] ?? '';
+    }
+
+    private function mockNewContent(): array
+    {
+        return [
+            json_decode('{
+                "id": "302127",
+                "title": "Discovery",
+                "upc": "724384960650",
+                "link": "https://www.deezer.com/album/302127",
+                "share": "https://www.deezer.com/album/302127?utm_source=deezer&utm_content=album-302127&utm_term=0_1603889105&utm_medium=web",
+                "cover": "https://api.deezer.com/album/302127/image",
+                "cover_small": "https://cdns-images.dzcdn.net/images/cover/2e018122cb56986277102d2041a592c8/56x56-000000-80-0-0.jpg",
+                "cover_medium": "https://cdns-images.dzcdn.net/images/cover/2e018122cb56986277102d2041a592c8/250x250-000000-80-0-0.jpg",
+                "cover_big": "https://cdns-images.dzcdn.net/images/cover/2e018122cb56986277102d2041a592c8/500x500-000000-80-0-0.jpg",
+                "cover_xl": "https://cdns-images.dzcdn.net/images/cover/2e018122cb56986277102d2041a592c8/1000x1000-000000-80-0-0.jpg",
+                "md5_image": "2e018122cb56986277102d2041a592c8",
+                "genre_id": 113,
+                "label": "Parlophone (France)",
+                "nb_tracks": 14,
+                "duration": 3660,
+                "fans": 218102,
+                "rating": 0,
+                "release_date": "2001-03-07",
+                "record_type": "album",
+                "available": true,
+                "tracklist": "https://api.deezer.com/album/302127/tracks",
+                "explicit_lyrics": false,
+                "explicit_content_lyrics": 7,
+                "explicit_content_cover": 0,
+                "type": "album"
+                }',
+                true
+            )
+        ];
     }
 }
