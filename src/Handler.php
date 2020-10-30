@@ -151,7 +151,7 @@ final class Handler
             'POST',
             self::DEEZER_ENDPOINT.'/playlist/'.$playlistId.'/tracks'
             .'?access_token='.$this->accessToken
-            .'&songs='.implode(',', array_column($trackCollection, 'id'))
+            .'&songs='.implode(',', array_unique(array_column($trackCollection, 'id')))
         )->getContent();
 
         if ('true' !== $response) {
