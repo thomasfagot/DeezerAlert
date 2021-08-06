@@ -89,8 +89,8 @@ final class Handler
 //        return $this->mockNewContent();
         $newContent = [];
         $today = date('Y-m-d');
-        $threeMonthsAgo = date('Y-m-d', strtotime('3 months ago'));
-        $twoWeeksAgo = date('Y-m-d', strtotime('2 weeks ago'));
+        $knownArtistMaximumDate = date('Y-m-d', strtotime('3 months ago'));
+        $newArtistMaximumDate = date('Y-m-d', strtotime('6 days ago'));
 
         foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/user/me/artists?access_token='.$this->accessToken) as $artist) {
             $artistHash = substr(md5($artist['name']), 0, 7);
@@ -98,9 +98,9 @@ final class Handler
             if (!isset($this->savedData[$artistHash])) {
                 // Recently added artist
                 $this->savedData[$artistHash] = [];
-                $maximumDate = $twoWeeksAgo;
+                $maximumDate = $newArtistMaximumDate;
             } else {
-                $maximumDate = $threeMonthsAgo;
+                $maximumDate = $knownArtistMaximumDate;
             }
 
             if ($artist['nb_album'] > count($this->savedData[$artistHash])) {
