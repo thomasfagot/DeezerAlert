@@ -5,21 +5,21 @@
 ![GitHub stars](https://img.shields.io/github/stars/thomasfagot/DeezerAlert?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/thomasfagot/DeezerAlert?style=social)
 
-DeezerAlert is a tool that allows Deezer users to receive an email notification when their favorite artists release new content.
+DeezerAlert is a tool that creates a playlist on your Deezer account every friday morning with the new releases of your favorite artists.
 This is a quick-and-dirty personal project 
 
 ## Prerequisities
 
 Before you begin, ensure you have met the following requirements:
 * You have PHP 7.2 or higher.
-* You have a public account on Deezer (as OAuth identification is not yet implemented).
-* SMTP is enabled on your server.
+* You have an account on Deezer.
 
 ## Installing DeezerAlert
 
 To install DeezerAlert, follow these steps:
 * Clone the project.
-* Fill the `.env` file. You can find the ID of your Deezer profile by going [here](https://www.deezer.com/profile/me) and copy the number in the URL.
+* Register your app on https://developers.deezer.com and create an access token.
+* Fill the `.env` file.
 
 ## Using DeezerAlert
 

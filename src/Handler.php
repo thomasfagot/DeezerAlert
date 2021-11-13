@@ -39,7 +39,7 @@ final class Handler
     public function __construct(string $accessToken)
     {
         $this->accessToken = $accessToken;
-        $this->savedData = file_exists(self::SAVE_FILE) ? json_decode(file_get_contents(self::SAVE_FILE), true) : [];
+        $this->savedData = file_exists(self::SAVE_FILE) ? json_decode(file_get_contents(self::SAVE_FILE), true, 512, JSON_THROW_ON_ERROR) : [];
         $this->httpClient = HttpClient::create();
     }
 
@@ -118,7 +118,7 @@ final class Handler
             }
         }
 
-        file_put_contents(self::SAVE_FILE, json_encode($this->savedData));
+        file_put_contents(self::SAVE_FILE, json_encode($this->savedData, JSON_THROW_ON_ERROR));
 
         return $newContent;
     }
@@ -205,9 +205,7 @@ final class Handler
                 "explicit_content_lyrics": 7,
                 "explicit_content_cover": 0,
                 "type": "album"
-                }',
-                true
-            )
+                }', true, 512, JSON_THROW_ON_ERROR)
         ];
     }
 }
