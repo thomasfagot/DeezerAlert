@@ -64,9 +64,10 @@ final class Handler
 
     private function handleRequestQuota(): void
     {
-        if (0 === ++$this->requestCounter % self::DEEZER_QUOTA_PER_X_SECONDS) {
+        if ($this->requestCounter > 0 && 0 === $this->requestCounter % self::DEEZER_QUOTA_PER_X_SECONDS) {
             sleep(self::DEEZER_QUOTA_SECONDS + 1);
         }
+        ++$this->requestCounter;
     }
 
     private function getNewContent(): array
