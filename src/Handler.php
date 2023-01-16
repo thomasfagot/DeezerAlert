@@ -16,25 +16,13 @@ final class Handler
     private const DEEZER_QUOTA_PER_X_SECONDS = 50;
     private const DEEZER_QUOTA_SECONDS = 5;
 
-    /**
-     * @var array
-     */
-    private $savedData;
+    private array $savedData;
 
-    /**
-     * @var HttpClientInterface
-     */
-    private $httpClient;
+    private HttpClientInterface $httpClient;
 
-    /**
-     * @var int
-     */
-    private $requestCounter = 0;
+    private int $requestCounter = 0;
 
-    /**
-     * @var string
-     */
-    private $accessToken;
+    private string $accessToken;
 
     public function __construct(string $accessToken)
     {
@@ -43,14 +31,11 @@ final class Handler
         $this->httpClient = HttpClient::create();
     }
 
-    public function process(): ?Playlist
+    public function process(): void
     {
-        $playlist = null;
         if ($newContent = $this->getNewContent()) {
-            $playlist = $this->createPlaylist($newContent);
+            $this->createPlaylist($newContent);
         }
-
-        return $playlist;
     }
 
     private function requestAll(string $url): array
@@ -64,7 +49,7 @@ final class Handler
             $response = $this->httpClient->request('GET', $nextUrl)->toArray();
 
             if (!isset($response['data'])) {
-                throw new RuntimeException('Unexpected response from Deezer API.');
+                throw new RuntimeException(sprintf('Unexpected response from Deezer API after %d request : %s', $this->requestCounter ?? 0, $response['error']['message'] ?? '?'));
             }
 
             foreach ($response['data'] as $item) {
@@ -123,7 +108,7 @@ final class Handler
         return $newContent;
     }
 
-    private function createPlaylist(array $newContent): Playlist
+    private function createPlaylist(array $newContent): void
     {
         $playlistName = 'Sorties du '.date('d/m/Y');
 
@@ -157,23 +142,6 @@ final class Handler
         if ('true' !== $response) {
             throw new RuntimeException('Could not add tracks to playlist : '.$response);
         }
-
-        return new Playlist(
-            $playlistName,
-            $this->getPlaylistCover($playlistId),
-            'https://www.deezer.com/fr/playlist/'.$playlistId,
-            $trackCollection
-        );
-    }
-
-    private function getPlaylistCover(int $playlistId): string
-    {
-        $this->handleRequestQuota();
-        return $this->httpClient->request(
-            'GET',
-            self::DEEZER_ENDPOINT.'/playlist/'.$playlistId
-                .'?access_token='.$this->accessToken
-            )->toArray()['picture_medium'] ?? '';
     }
 
     private function mockNewContent(): array
