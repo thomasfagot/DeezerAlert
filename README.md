@@ -11,7 +11,7 @@ This is a quick-and-dirty personal project
 ## Prerequisities
 
 Before you begin, ensure you have met the following requirements:
-* You have PHP 8.1 or higher.
+* You have PHP 8.3 or higher.
 * You have an account on Deezer.
 
 ## Installing DeezerAlert

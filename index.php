@@ -9,10 +9,10 @@ use Symfony\Component\Mime\Email;
 
 (new Dotenv())->load(__DIR__.'/.env');
 
-if (!($deezerAccessToken = getenv('DEEZER_ACCESS_TOKEN'))
-    || !($emailRecipient = getenv('EMAIL_RECIPIENT'))
-    || !($emailSender = getenv('EMAIL_SENDER'))
-    || !($mailerDSN = getenv('MAILER_DSN'))
+if (!($deezerAccessToken = $_ENV['DEEZER_ACCESS_TOKEN'])
+    || !($emailRecipient = $_ENV['EMAIL_RECIPIENT'])
+    || !($emailSender = $_ENV['EMAIL_SENDER'])
+    || !($mailerDSN = $_ENV['MAILER_DSN'])
 ) {
     throw new RuntimeException('Configuration is not complete in ".env" file.');
 }
