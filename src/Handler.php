@@ -4,6 +4,8 @@ namespace DeezerAlert;
 
 use RuntimeException;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\Retry\GenericRetryStrategy;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function count;
 use function md5;
@@ -11,10 +13,10 @@ use function substr;
 
 final class Handler
 {
-    private const DEEZER_ENDPOINT = 'https://api.deezer.com';
-    private const SAVE_FILE = __DIR__.'/../resources/saved_data.json';
-    private const DEEZER_QUOTA_PER_X_SECONDS = 50;
-    private const DEEZER_QUOTA_SECONDS = 5;
+    private const string DEEZER_ENDPOINT = 'https://api.deezer.com';
+    private const string SAVE_FILE = __DIR__.'/../resources/saved_data.json';
+    private const int DEEZER_QUOTA_PER_X_SECONDS = 49;
+    private const int DEEZER_QUOTA_SECONDS = 6;
 
     private array $savedData;
 
@@ -22,13 +24,24 @@ final class Handler
 
     private int $requestCounter = 0;
 
-    private string $accessToken;
-
-    public function __construct(string $accessToken)
+    public function __construct(private readonly string $accessToken)
     {
-        $this->accessToken = $accessToken;
         $this->savedData = file_exists(self::SAVE_FILE) ? json_decode(file_get_contents(self::SAVE_FILE), true, 512, JSON_THROW_ON_ERROR) : [];
-        $this->httpClient = HttpClient::create();
+        $httpClient = HttpClient::create([
+            'base_uri' => self::DEEZER_ENDPOINT,
+            'timeout' => 10,
+            'max_duration' => 10,
+            'max_redirects' => 3,
+        ]);
+        $this->httpClient = new RetryableHttpClient(
+            $httpClient,
+            new GenericRetryStrategy(
+                array_merge(GenericRetryStrategy::DEFAULT_RETRY_STATUS_CODES, [403]),
+                self::DEEZER_QUOTA_SECONDS * 1000,
+                2,
+                self::DEEZER_QUOTA_SECONDS * 3 * 1000,
+            )
+        );
     }
 
     public function process(): void
@@ -78,7 +91,7 @@ final class Handler
         $knownArtistMaximumDate = date('Y-m-d', strtotime('3 months ago'));
         $newArtistMaximumDate = date('Y-m-d', strtotime('6 days ago'));
 
-        foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/user/me/artists?access_token='.$this->accessToken) as $artist) {
+        foreach ($this->requestAll('/user/me/artists?access_token='.$this->accessToken) as $artist) {
             $artistHash = substr(md5($artist['name']), 0, 7);
 
             if (!isset($this->savedData[$artistHash])) {
@@ -90,7 +103,7 @@ final class Handler
             }
 
             if ($artist['nb_album'] > count($this->savedData[$artistHash])) {
-                foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/artist/'.$artist['id'].'/albums') as $album) {
+                foreach ($this->requestAll('/artist/'.$artist['id'].'/albums') as $album) {
                     $albumHash = substr(md5($album['title']), 0, 7);
 
                     if ($album['release_date'] <= $today && !in_array($albumHash, $this->savedData[$artistHash], true)) {
@@ -116,7 +129,7 @@ final class Handler
         $this->handleRequestQuota();
         $playlistId = $this->httpClient->request(
             'POST',
-            self::DEEZER_ENDPOINT.'/user/me/playlists'
+            '/user/me/playlists'
             .'?access_token='.$this->accessToken
             .'&title='.$playlistName
         )->toArray()['id'] ?? null;
@@ -127,7 +140,7 @@ final class Handler
 
         $trackCollection = [];
         foreach ($newContent as $album) {
-            foreach ($this->requestAll(self::DEEZER_ENDPOINT.'/album/'.$album['id'].'/tracks') as $track) {
+            foreach ($this->requestAll('/album/'.$album['id'].'/tracks') as $track) {
                 $trackCollection[] = $track;
             }
         }
@@ -135,12 +148,12 @@ final class Handler
         $this->handleRequestQuota();
         $response = $this->httpClient->request(
             'POST',
-            self::DEEZER_ENDPOINT.'/playlist/'.$playlistId.'/tracks'
+            '/playlist/'.$playlistId.'/tracks'
             .'?access_token='.$this->accessToken
             .'&songs='.implode(',', array_unique(array_column($trackCollection, 'id')))
         )->getContent();
 
-        if ('true' !== $response) {
+        if ('true' !== strtoupper($response)) {
             throw new RuntimeException('Could not add tracks to playlist : '.$response);
         }
     }
