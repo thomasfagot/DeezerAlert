@@ -1,0 +1,29 @@
+{
+  "name": "thomasfagot/deezer-alert",
+  "description": "Sends alerts when your favorite artists release new content.",
+  "keywords": [
+    "Deezer"
+  ],
+  "authors": [
+    {
+      "name": "Thomas Fagot"
+    }
+  ],
+  "license": "MIT",
+  "require": {
+    "php": "^8.3",
+    "symfony/dotenv": "^7.0",
+    "symfony/http-client": "^7.0",
+    "symfony/mailer": "^7.0",
+    "symfony/mime": "^7.0",
+    "symfony/google-mailer": "^7.0"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  },
+  "autoload": {
+    "psr-4": {
+      "DeezerAlert\\": "src/"
+    }
+  }
+}
