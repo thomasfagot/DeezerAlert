@@ -1,0 +1,17 @@
+services:
+  app:
+    container_name: ${COMPOSE_PROJECT_NAME}_app
+    restart: unless-stopped
+    image: php:8.3-alpine
+    command: tail -f /dev/null
+    user: "1000:1000"
+    volumes:
+      - ./:/var/www/html:delegated
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
+    logging:
+      options:
+        max-file: "5"
+        max-size: "10m"
