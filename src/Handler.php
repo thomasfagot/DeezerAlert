@@ -15,8 +15,8 @@ final class Handler
 {
     private const string DEEZER_ENDPOINT = 'https://api.deezer.com';
     private const string SAVE_FILE = __DIR__.'/../resources/saved_data.json';
-    private const int DEEZER_QUOTA_PER_X_SECONDS = 49;
-    private const int DEEZER_QUOTA_SECONDS = 6;
+    private const int DEEZER_QUOTA_PER_X_SECONDS = 50;
+    private const int DEEZER_QUOTA_SECONDS = 5;
 
     private array $savedData;
 
@@ -77,7 +77,7 @@ final class Handler
 
     private function handleRequestQuota(): void
     {
-        if ($this->requestCounter > 0 && 0 === $this->requestCounter % self::DEEZER_QUOTA_PER_X_SECONDS) {
+        if ($this->requestCounter > 0 && 0 === $this->requestCounter % (self::DEEZER_QUOTA_PER_X_SECONDS - 1)) {
             sleep(self::DEEZER_QUOTA_SECONDS + 1);
         }
         ++$this->requestCounter;
