@@ -62,11 +62,11 @@ final class Handler
 
             $request = $this->httpClient->request('GET', $nextUrl);
             if (200 !== ($code = $request->getStatusCode())) {
-                throw new RuntimeException(sprintf('Unexpected response code "%d" after %d requests : %s', $code, $this->requestCounter ?? 0, $request->getContent(false)));
+                throw new RuntimeException(sprintf('%s : unexpected response code "%d" after %d requests : %s', $nextUrl, $code, $this->requestCounter ?? 0, $request->getContent(false)));
             }
             $response = $request->toArray(false);
             if (!isset($response['data'])) {
-                throw new RuntimeException(sprintf('Unexpected response content after %d requests : %s', $this->requestCounter ?? 0, $response['error']['message'] ?? $request->getContent(false) ?? '?'));
+                throw new RuntimeException(sprintf('%s : unexpected response content after %d requests : %s', $nextUrl, $this->requestCounter ?? 0, $response['error']['message'] ?? $request->getContent(false) ?? '?'));
             }
 
             foreach ($response['data'] as $item) {
@@ -145,16 +145,20 @@ final class Handler
             }
         }
 
-        $this->handleRequestQuota();
-        $response = $this->httpClient->request(
-            'POST',
-            '/playlist/'.$playlistId.'/tracks'
-            .'?access_token='.$this->accessToken
-            .'&songs='.implode(',', array_unique(array_column($trackCollection, 'id')))
-        )->getContent();
-
-        if ('true' !== strtoupper($response)) {
-            throw new RuntimeException('Could not add tracks to playlist : '.$response);
+        // Push by chunks to prevent urls longer than 2k characters
+        $trackIds = array_unique(array_column($trackCollection, 'id'));
+        foreach (array_chunk($trackIds, 150) as $trackChunk) {
+            $this->handleRequestQuota();
+            $response = $this->httpClient->request(
+                'POST',
+                '/playlist/'.$playlistId.'/tracks'
+                .'?access_token='.$this->accessToken
+                .'&songs='.implode(',', $trackChunk)
+            );
+            $content = $response->getContent(false);
+            if ('true' !== strtolower($content)) {
+                throw new RuntimeException(sprintf('%d : could not add tracks to playlist : %s', $response->getStatusCode(), $content));
+            }
         }
     }
 
