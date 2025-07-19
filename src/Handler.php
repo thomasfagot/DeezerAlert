@@ -50,6 +50,7 @@ final class Handler
         if ($newContent = $this->getNewContent()) {
             $this->createPlaylist($newContent);
         }
+        file_put_contents(self::SAVE_FILE, json_encode($this->savedData, JSON_THROW_ON_ERROR));
     }
 
     private function requestAll(string $url): Generator
@@ -114,8 +115,6 @@ final class Handler
                 }
             }
         }
-
-        file_put_contents(self::SAVE_FILE, json_encode($this->savedData, JSON_THROW_ON_ERROR));
 
         return $newContent;
     }
