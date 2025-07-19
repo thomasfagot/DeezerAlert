@@ -60,10 +60,13 @@ final class Handler
         do {
             $this->handleRequestQuota();
 
-            $response = $this->httpClient->request('GET', $nextUrl)->toArray();
-
+            $request = $this->httpClient->request('GET', $nextUrl);
+            if (200 !== ($code = $request->getStatusCode())) {
+                throw new RuntimeException(sprintf('Unexpected response code "%d" after %d requests : %s', $code, $this->requestCounter ?? 0, $request->getContent(false)));
+            }
+            $response = $request->toArray(false);
             if (!isset($response['data'])) {
-                throw new RuntimeException(sprintf('Unexpected response from Deezer API after %d request : %s', $this->requestCounter ?? 0, $response['error']['message'] ?? '?'));
+                throw new RuntimeException(sprintf('Unexpected response content after %d requests : %s', $this->requestCounter ?? 0, $response['error']['message'] ?? $request->getContent(false) ?? '?'));
             }
 
             foreach ($response['data'] as $item) {
