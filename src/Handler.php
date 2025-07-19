@@ -2,6 +2,7 @@
 
 namespace DeezerAlert;
 
+use Generator;
 use RuntimeException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Retry\GenericRetryStrategy;
@@ -51,9 +52,8 @@ final class Handler
         }
     }
 
-    private function requestAll(string $url): array
+    private function requestAll(string $url): Generator
     {
-        $data = [];
         $nextUrl = $url;
 
         do {
@@ -66,13 +66,11 @@ final class Handler
             }
 
             foreach ($response['data'] as $item) {
-                $data[] = $item;
+                yield $item;
             }
 
             $nextUrl = $response['next'] ?? null;
         } while ($nextUrl);
-
-        return $data;
     }
 
     private function handleRequestQuota(): void
