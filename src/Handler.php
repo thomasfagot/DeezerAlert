@@ -65,6 +65,11 @@ final class Handler
                 throw new RuntimeException(sprintf('%s : unexpected response code "%d" after %d requests : %s', $nextUrl, $code, $this->requestCounter ?? 0, $request->getContent(false)));
             }
             $response = $request->toArray(false);
+            if (isset($response['error']['code']) && 800 === $response['error']['code']) {
+                // Ignore "no data" errors
+                $nextUrl = null;
+                break;
+            }
             if (!isset($response['data'])) {
                 throw new RuntimeException(sprintf('%s : unexpected response content after %d requests : %s', $nextUrl, $this->requestCounter ?? 0, $response['error']['message'] ?? $request->getContent(false) ?? '?'));
             }
